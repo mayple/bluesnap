@@ -1,0 +1,20 @@
+sudo: false
+
+language: python
+
+python:
+  - "3.5"
+  - "3.6"
+#  - "3.7" <-- add this when Travis finally supports it
+
+cache:
+  directories:
+    - $HOME/virtualenv/python${TRAVIS_PYTHON_VERSION}/
+
+install:
+  - virtualenv .venv -p python${TRAVIS_PYTHON_VERSION}
+  - pip install -r requirements.txt
+  - pip install -r tests/requirements.txt
+
+script:
+  - nosetests tests/
