@@ -1,4 +1,5 @@
 import re
+from abc import abstractmethod
 from urllib.parse import urlparse
 
 import requests
@@ -17,6 +18,10 @@ class Resource(object):
         response, body = self.client.request(method, path, data)
         return response, body
 
+
+# ------------------
+# XML API
+# ------------------
 
 class ShopperResource(Resource):
     shoppers_path = '/services/2/shoppers'
@@ -164,6 +169,10 @@ class OrderResource(Resource):
         return body['order']
 
 
+# ------------------
+# JSON API
+# ------------------
+
 class PaymentFieldsTokenResource(Resource):
     '''
     If you would like to build your custom checkout flow using the API, but keep your PCI compliance requirements
@@ -200,6 +209,513 @@ class PaymentFieldsTokenResource(Resource):
         return self._tokenId
 
 
+class DictableObject:
+
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def toDict(self):
+        raise NotImplementedError("Must implement this.")
+
+    def _setToDictIfHasValue(self, resultDict: dict, key: str):
+        '''
+        Set a value to a dict if it has a value
+        :param resultDict:
+        :param key:
+        :return:
+        '''
+
+        if hasattr(self, key) and getattr(self, key, None):
+            resultDict[key] = getattr(self, key)
+
+    def _setToDictIfHasValues(self, resultDict: dict, keys: list):
+        for key in keys:
+            self._setToDictIfHasValue(resultDict, key)
+
+
+class ShippingContactInfo(DictableObject):
+
+    def __init__(
+            self,
+            firstName: str,
+            lastName: str,
+            address1: str = None,
+            address2: str = None,
+            city: str = None,
+            state: str = None,
+            country: str = None,
+            zip: str = None,
+    ):
+        '''
+        Details of a Shipping Contact Info.
+
+        More information here:
+        https://developers.bluesnap.com/v8976-JSON/docs/shipping-contact-info
+
+        :param firstName: Shopper's first name. Maximum 100 characters.
+        :param lastName: Shopper's last name. Maximum 100 characters.
+        :param address1: Shopper's address line 1. Maximum 100 characters.
+        :param address2: Shopper's address line 2. Maximum 100 characters.
+        :param city: Shopper's city. Between 2-42 characters.
+        :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
+        :param country: Based on https://developers.bluesnap.com/docs/country-codes
+        :param zip: Shopper's ZIP code. Maximum 20 characters.
+        '''
+
+        # Call base class init
+        super(ShippingContactInfo, self).__init__()
+
+        if not firstName or not lastName or not address1 or not city or not zip or not country:
+            raise ValueError('firstName, lastName, address1, city, zip and country are '
+                             'required are required.')
+
+        self.firstName = firstName
+        self.lastName = lastName
+        self.address1 = address1
+        self.address2 = address2
+        self.city = city
+        self.state = state
+        self.country = country
+        self.zip = zip
+
+    def toDict(self) -> dict:
+        result = {
+            "firstName": self.firstName,
+            "lastName": self.lastName,
+            "address1": self.address1,
+            "city": self.city,
+            "zip": self.zip,
+            "country": self.country,
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "address2",
+                "state",
+            ]
+        )
+
+        return result
+
+
+class BillingContactInfo(DictableObject):
+
+    def __init__(
+            self,
+            firstName: str,
+            lastName: str,
+            personalIdentificationNumber: str = None,
+            address1: str = None,
+            address2: str = None,
+            city: str = None,
+            state: str = None,
+            country: str = None,
+            zip: str = None,
+    ):
+        '''
+        Details of a Billing Contact Info.
+
+        More information here:
+        https://developers.bluesnap.com/v8976-JSON/docs/billing-contact-info
+
+        :param firstName: Shopper's first name. Maximum 100 characters.
+        :param lastName: Shopper's last name. Maximum 100 characters.
+        :param personalIdentificationNumber: The shopper's local personal identification number.
+            These are the ID types per country:
+            Argentina - DNI (length 7-11 chars)
+            Brazil - CPF/CNPJ (length 11-14 chras)
+            Chile - RUN (length 8-9 chars)
+            Colombia - CC (length 6-10 chars)
+            Mexico - CURP/RFC (length 10-18 chars)
+        :param address1: Shopper's address line 1. Maximum 100 characters.
+        :param address2: Shopper's address line 2. Maximum 100 characters.
+        :param city: Shopper's city. Between 2-42 characters.
+        :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
+        :param country: Based on https://developers.bluesnap.com/docs/country-codes
+        :param zip: Shopper's ZIP code. Maximum 20 characters.
+        '''
+
+        # Call base class init
+        super(BillingContactInfo, self).__init__()
+
+        if not firstName or not lastName or not address1 or not city or not zip or not country or \
+                not personalIdentificationNumber:
+            raise ValueError('firstName, lastName, address1, city, zip, country and personalIdentificationNumber are '
+                             'required are required.')
+
+        self.firstName = firstName
+        self.lastName = lastName
+        self.personalIdentificationNumber = personalIdentificationNumber
+        self.address1 = address1
+        self.address2 = address2
+        self.city = city
+        self.state = state
+        self.country = country
+        self.zip = zip
+
+    def toDict(self) -> dict:
+        result = {
+            "firstName": self.firstName,
+            "lastName": self.lastName,
+            "address1": self.address1,
+            "city": self.city,
+            "zip": self.zip,
+            "country": self.country,
+            "personalIdentificationNumber": self.personalIdentificationNumber,
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "address2",
+                "state",
+            ]
+        )
+
+        return result
+
+
+class TransactionFraudInfo(DictableObject):
+
+    def __init__(
+            self,
+            fraudSessionId: str,
+            shopperIpAddress: str = None,
+            company: str = None,
+            shippingContactInfo: ShippingContactInfo = None,
+            # TODO: enterpriseSiteId
+            # TODO: enterpriseUdfs
+    ):
+        '''
+        Transaction Fraud Info class.
+
+        More information here:
+        https://developers.bluesnap.com/v8976-JSON/docs/transaction-fraud-info
+
+        :param fraudSessionId: Unique ID of the shopper whose device fingerprint information was collected on
+            the checkout page. The Fraud Session ID should contain up to 32 alpha-numeric characters only.
+            https://developers.bluesnap.com/docs/fraud-prevention#section-device-data-checks
+        :param shopperIpAddress: Shopper's IP address. Should be a valid IPv4 or IPv6 address.
+        :param company: Shopper's company name. Maximum 100 characters.
+        :param shippingContactInfo: ShippingContactInfo object
+        '''
+
+        # Call base class init
+        super(TransactionFraudInfo, self).__init__()
+
+        if not fraudSessionId:
+            raise ValueError('fraudSessionId is required.')
+
+        self.fraudSessionId = fraudSessionId
+        self.shopperIpAddress = shopperIpAddress
+        self.company = company
+        self.shippingContactInfo = shippingContactInfo
+
+    def toDict(self) -> dict:
+        result = {
+            "fraudSessionId": self.fraudSessionId,
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "shopperIpAddress",
+                "company",
+            ]
+        )
+
+        if self.shippingContactInfo:
+            result["shippingContactInfo"] = self.shippingContactInfo.toDict()
+
+        return result
+
+
+class VaultedShopperInfo(DictableObject):
+    '''
+    A Vaulted Shopper Info object, containing some of the fields defined here:
+    https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
+    '''
+
+    def __init__(
+            self,
+            firstName: str,
+            lastName: str,
+            companyName: str = None,
+            personalIdentificationNumber: str = None,
+            shopperCurrency: str = 'USD',
+            softDescriptor: str = None,
+            descriptorPhoneNumber: str = None,
+            merchantShopperId: str = None,
+            address: str = None,
+            address2: str = None,
+            city: str = None,
+            state: str = None,
+            country: str = None,
+            zip: str = None,
+            email: str = None,
+            phone: str = None,
+            shippingContactInfo: ShippingContactInfo = None,
+            transactionFraudInfo: TransactionFraudInfo = None,
+    ):
+        '''
+        Details of a Vaulted Shopper.
+
+        More information here:
+        https://developers.bluesnap.com/v8976-JSON/docs/create-vaulted-shopper#section-request-content
+
+        :param firstName: Shopper's first name. Maximum 100 characters.
+        :param lastName: Shopper's last name. Maximum 100 characters.
+        :param companyName: Shopper's company name. Maximum 100 characters.
+        :param personalIdentificationNumber: The shopper's local personal identification number.
+            These are the ID types per country:
+            Argentina - DNI (length 7-11 chars)
+            Brazil - CPF/CNPJ (length 11-14 chras)
+            Chile - RUN (length 8-9 chars)
+            Colombia - CC (length 6-10 chars)
+            Mexico - CURP/RFC (length 10-18 chars)
+        :param shopperCurrency: Shopper's currency. Based on https://developers.bluesnap.com/docs/currency-codes
+        :param softDescriptor: Description that may appear on the shopper's bank statement when BlueSnap validates
+            the card. Maximum 20 characters.
+            More info here: https://developers.bluesnap.com/docs/statement-descriptor
+        :param descriptorPhoneNumber: Merchant's support phone number that may appear on the shopper's bank statement
+            when BlueSnap validates the card. Maximum 20 characters.
+            More info here: https://developers.bluesnap.com/docs/statement-descriptor
+        :param merchantShopperId: A merchant's ID for a specific shopper, up to 50 characters.
+        :param address: Shopper's address line 1. Maximum 100 characters.
+        :param address2: Shopper's address line 2. Maximum 100 characters.
+        :param city: Shopper's city. Between 2-42 characters.
+        :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
+        :param country: Based on https://developers.bluesnap.com/docs/country-codes
+        :param zip: Shopper's ZIP code. Maximum 20 characters.
+        :param email: Shopper's email address. Between 3-100 characters.
+        :param phone: Shopper's phone number. Between 2-36 characters.
+        :param shippingContactInfo: ShippingContactInfo object
+        :param transactionFraudInfo: TransactionFraudInfo
+        # TODO: walletId
+        '''
+
+        # Call base class init
+        super(VaultedShopperInfo, self).__init__()
+
+        if not firstName or not lastName:
+            raise ValueError('firstName and lastName are required.')
+
+        self.firstName = firstName
+        self.lastName = lastName
+        self.companyName = companyName
+        self.personalIdentificationNumber = personalIdentificationNumber
+        self.shopperCurrency = shopperCurrency
+        self.softDescriptor = softDescriptor
+        self.descriptorPhoneNumber = descriptorPhoneNumber
+        self.merchantShopperId = merchantShopperId
+        self.address = address
+        self.address2 = address2
+        self.city = city
+        self.state = state
+        self.country = country
+        self.zip = zip
+        self.email = email
+        self.phone = phone
+        self.shippingContactInfo = shippingContactInfo
+        self.transactionFraudInfo = transactionFraudInfo
+
+    def toDict(self) -> dict:
+        result = {
+            "firstName": self.firstName,
+            "lastName": self.lastName,
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "companyName",
+                "personalIdentificationNumber",
+                "shopperCurrency",
+                "softDescriptor",
+                "descriptorPhoneNumber",
+                "merchantShopperId",
+                "address",
+                "address2",
+                "city",
+                "state",
+                "country",
+                "zip",
+                "email",
+                "phone",
+                "fraudSessionId",
+                "shopperIpAddress",
+            ]
+        )
+
+        if self.shippingContactInfo:
+            result["shippingContactInfo"] = self.shippingContactInfo.toDict()
+
+        if self.transactionFraudInfo:
+            result["transactionFraudInfo"] = self.transactionFraudInfo.toDict()
+
+        return result
+
+
+class Level3DataItem(DictableObject):
+
+    '''
+    Contains Level 2/3 data properties for each item purchased
+    https://developers.bluesnap.com/v8976-JSON/docs/level3dataitems
+
+    While all level3DataItems properties are optional in the request, each data level (such as Level 2 and Level 3)
+    has specific requirements. See the Level 2/3 Data guide for complete details.
+    https://developers.bluesnap.com/docs/level-23-data
+    '''
+
+    def __init__(
+            self,
+            lineItemTotal: str = None,
+            commodityCode: str = None,
+            description: str = None,
+            discountAmount: str = None,
+            discountIndicator: str = None,
+            grossNetIndicator: str = None,
+            productCode: str = None,
+            itemQuantity: str = None,
+            taxAmount: str = None,
+            taxRate: str = None,
+            taxType: str = None,
+            unitCost: str = None,
+            unitOfMeasure: str = None,
+    ):
+        '''
+
+        :param lineItemTotal: Total item amount.
+        :param commodityCode: Commodity code used to classify item.
+        :param description: Item description
+        :param discountAmount: Discount amount applied to item
+        :param discountIndicator: Indicates whether item amount is discounted. 'Y' or 'N'
+        :param grossNetIndicator: Indicates whether tax is included in item amount. 'Y' or 'N'
+        :param productCode: Product code for item
+        :param itemQuantity: Item quantity purchased
+        :param taxAmount: Tax amount for item
+        :param taxRate: Tax rate applied to item
+        :param taxType: Type of tax being applied
+        :param unitCost: Unit cost
+        :param unitOfMeasure: Unit of measure
+        '''
+
+        # Call base class init
+        super(Level3DataItem, self).__init__()
+
+        self.lineItemTotal = lineItemTotal
+        self.commodityCode = commodityCode
+        self.description = description
+        self.discountAmount = discountAmount
+        self.discountIndicator = discountIndicator
+        self.grossNetIndicator = grossNetIndicator
+        self.productCode = productCode
+        self.itemQuantity = itemQuantity
+        self.taxAmount = taxAmount
+        self.taxRate = taxRate
+        self.taxType = taxType
+        self.unitCost = unitCost
+        self.unitOfMeasure = unitOfMeasure
+
+    def toDict(self) -> dict:
+        result = {
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "lineItemTotal",
+                "commodityCode",
+                "description",
+                "discountAmount",
+                "discountIndicator",
+                "grossNetIndicator",
+                "productCode",
+                "itemQuantity",
+                "taxAmount",
+                "taxRate",
+                "taxType",
+                "unitCost",
+                "unitOfMeasure",
+            ]
+        )
+
+        return result
+
+class Level3Data(DictableObject):
+
+    '''
+    Contains Level 2/3 data properties for the transaction
+
+    While all level3Data properties are optional in the request, each data level (such as Level 2 and Level 3) has
+    specific requirements. See the Level 2/3 Data guide for complete details.
+    https://developers.bluesnap.com/docs/level-23-data
+    '''
+
+    def __init__(
+            self,
+            customerReferenceNumber: str = None,
+            salesTaxAmount: str = None,
+            freightAmount: str = None,
+            dutyAmount: str = None,
+            destinationZipCode: str = None,
+            destinationCountryCode: str = None,
+            shipFromZipCode: str = None,
+            discountAmount: str = None,
+            taxAmount: str = None,
+            taxRate: str = None,
+            level3DataItems: list = [],
+    ):
+
+        # Call base class init
+        super(Level3Data, self).__init__()
+
+        self.customerReferenceNumber = customerReferenceNumber
+        self.salesTaxAmount          = salesTaxAmount
+        self.freightAmount           = freightAmount
+        self.dutyAmount              = dutyAmount
+        self.destinationZipCode      = destinationZipCode
+        self.destinationCountryCode  = destinationCountryCode
+        self.shipFromZipCode         = shipFromZipCode
+        self.discountAmount          = discountAmount
+        self.taxAmount               = taxAmount
+        self.taxRate                 = taxRate
+        self.level3DataItems         = level3DataItems
+
+    def toDict(self) -> dict:
+        result = {
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "customerReferenceNumber",
+                "salesTaxAmount",
+                "freightAmount",
+                "dutyAmount",
+                "destinationZipCode",
+                "destinationCountryCode",
+                "shipFromZipCode",
+                "discountAmount",
+                "taxAmount",
+                "taxRate",
+            ]
+        )
+
+        if self.level3DataItems:
+            level3DataItems = []
+
+            for dataItem in self.level3DataItems:
+                level3DataItems.append(
+                    dataItem.toDict()
+                )
+            result["level3DataItems"] = level3DataItems
+
+        return result
+
+
 class VaultedShopperResource(Resource):
     path = '/services/2/vaulted-shoppers'
 
@@ -207,7 +723,7 @@ class VaultedShopperResource(Resource):
         self._tokenId = None
         super(VaultedShopperResource, self).__init__()
 
-    def retrieve(self, vaultedShopperId):
+    def retrieve(self, vaultedShopperId: str) -> dict:
         '''
         The Retrieve Vaulted Shopper request retrieves all the saved details for the shopper associated with the
         vaultedShopperId you send in the request.
@@ -222,7 +738,15 @@ class VaultedShopperResource(Resource):
 
         return dict(body['vaulted-shopper'])
 
-    def createFromPaymentFieldsToken(self, paymentFieldsTokenId, firstName, lastName):
+    def createFromPaymentFieldsToken(
+            self,
+            vaultedShopperInfo: VaultedShopperInfo,
+            paymentFieldsTokenId: str,
+            billingContactInfo: BillingContactInfo,
+            # TODO: creditCard
+            # TODO: ecpInfo
+            # TODO: sepaDirectDebitInfo
+    ) -> dict:
         '''
         The Create Vaulted Shopper request enables you to store a shopper's details (including payment info) securely
         in BlueSnap. BlueSnap will provide a token (vaultedShopperId) for that saved shopper.
@@ -234,17 +758,25 @@ class VaultedShopperResource(Resource):
 
         https://developers.bluesnap.com/v8976-JSON/docs/create-vaulted-shopper
 
-        :param paymentFieldsTokenId:
-        :param firstName:
-        :param lastName:
+        :param vaultedShopperInfo: This is used for invoices, and to show information about the user in BlueSnap itself
+        :param paymentFieldsTokenId: Required if using Hosted Payment Fields. Do not include credit-card resource if
+            using this token
+        :param billingContactInfo: Contains billing contact information. This is connected to the payment method and
+            will NOT be used for invoicing, etc.
         :return:
         '''
 
         data = {
-            "paymentSources": {"creditCardInfo": [{"pfToken": paymentFieldsTokenId}]},
-            "firstName": firstName,
-            "lastName": lastName
+            "paymentSources": {
+                "creditCardInfo": [
+                    {
+                        "pfToken": paymentFieldsTokenId,
+                        'billingContactInfo': billingContactInfo.toDict()
+                    }
+                ]
+            },
         }
+        data.update(vaultedShopperInfo.toDict())
 
         response, body = self.request('POST', self.path, data=data)
 
@@ -281,7 +813,7 @@ class TransactionMetadata:
     ]
     '''
 
-    def __init__(self, value, key, description):
+    def __init__(self, value: str, key: str, description: str):
 
         if value is None or value == "" or key is None or key == "" or description is None or description == "":
             raise ValueError(
@@ -295,7 +827,7 @@ class TransactionMetadata:
         if len(self.value) > 500 or len(self.key) > 40 or len(self.description) > 40:
             raise ValueError('Maximum length in chars - value: 500, key: 40, description: 40')
 
-    def toDict(self):
+    def toDict(self) -> dict:
 
         return {
             "metaValue": self.value,
@@ -312,12 +844,17 @@ class TransactionResource(Resource):
 
     def authCapture(
             self,
-            vaultedShopperId,
-            amount,
-            currency,
-            softDescriptor=None,
-            transactionMetadataObjectList=()
-    ):
+            vaultedShopperId: str,
+            amount: str,
+            currency: str,
+
+            merchantTransactionId: str = None,
+            softDescriptor: str = None,
+            descriptorPhoneNumber: str = None,
+            level3Data: Level3Data = None,
+
+            transactionMetadataObjectList: list = ()
+    ) -> dict:
         '''
         Auth Capture performs two actions via a single request:
 
@@ -330,7 +867,12 @@ class TransactionResource(Resource):
         :param vaultedShopperId:
         :param amount:
         :param currency:
-        :param softDescriptor:
+        :param merchantTransactionId: Merchant's unique ID for a new transaction. Between 1-50 characters.
+        :param softDescriptor: Description of the transaction, which appears on the shopper's credit card statement.
+            Maximum 20 characters. Overrides merchant default value.
+        :param descriptorPhoneNumber: Merchant's support phone number that will appear on the shopper's credit card
+            statement. Maximum 20 characters. Overrides merchant default value.
+        :param level3Data: Contains Level 2/3 data properties for the transaction
         :param transactionMetadataObjectList:
         :return:
         '''
@@ -340,17 +882,19 @@ class TransactionResource(Resource):
             vaultedShopperId=vaultedShopperId,
             amount=amount,
             currency=currency,
+            merchantTransactionId=merchantTransactionId,
             softDescriptor=softDescriptor,
+            descriptorPhoneNumber=descriptorPhoneNumber,
+            level3Data=level3Data,
             transactionMetadataObjectList=transactionMetadataObjectList
         )
 
     def auth(
             self,
-            vaultedShopperId,
-            amount,
-            currency,
-            softDescriptor=None,
-    ):
+            vaultedShopperId: str,
+            amount: str,
+            currency: str
+    ) -> dict:
         '''
         Auth Only is a request to check whether a credit card is valid and has the funds to complete a specific
         transaction (i.e. purchase). It does not actually run the charge on the card, but does temporarily hold
@@ -367,7 +911,6 @@ class TransactionResource(Resource):
         :param vaultedShopperId:
         :param amount:
         :param currency:
-        :param softDescriptor:
         :return:
         '''
 
@@ -376,11 +919,9 @@ class TransactionResource(Resource):
             vaultedShopperId=vaultedShopperId,
             amount=amount,
             currency=currency,
-            softDescriptor=softDescriptor,
-            transactionMetadataObjectList=[]
         )
 
-    def retrieve(self, transactionId):
+    def retrieve(self, transactionId: str) -> dict:
 
         '''
         Retrieve is a request that gets details about a past transaction, such as the transaction type, amount,
@@ -396,13 +937,16 @@ class TransactionResource(Resource):
 
     def _executeTransaction(
             self,
-            cardTransactionType,
-            vaultedShopperId,
-            amount,
-            currency,
-            softDescriptor=None,
-            transactionMetadataObjectList=[]
-    ):
+            cardTransactionType: str,
+            vaultedShopperId: str,
+            amount: str,
+            currency: str,
+            merchantTransactionId: str = None,
+            softDescriptor: str = None,
+            descriptorPhoneNumber: str = None,
+            level3Data: Level3Data=None,
+            transactionMetadataObjectList: list = (),
+    ) -> dict:
         '''
         Internal, perform an auth/capture operation.
 
@@ -422,8 +966,17 @@ class TransactionResource(Resource):
             "cardTransactionType": cardTransactionType,
         }
 
+        if merchantTransactionId:
+            data['merchantTransactionId'] = merchantTransactionId
+
         if softDescriptor:
             data['softDescriptor'] = softDescriptor
+
+        if descriptorPhoneNumber:
+            data['descriptorPhoneNumber'] = softDescriptor
+
+        if level3Data:
+            data['level3Data'] = level3Data.toDict()
 
         transactionMetaData = []
         for currentMetadataObject in transactionMetadataObjectList:
