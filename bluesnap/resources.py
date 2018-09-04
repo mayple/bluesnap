@@ -300,6 +300,98 @@ class ShippingContactInfo(DictableObject):
         return result
 
 
+
+class CardHolderInfo(DictableObject):
+
+    '''
+    A Vaulted Shopper Info object, containing some of the fields defined here:
+    https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
+    '''
+
+    def __init__(
+            self,
+            firstName: str,
+            lastName: str,
+            personalIdentificationNumber: str = None,
+            merchantShopperId: str = None,
+            address: str = None,
+            address2: str = None,
+            city: str = None,
+            state: str = None,
+            country: str = None,
+            zip: str = None,
+            email: str = None,
+            phone: str = None,
+    ):
+        '''
+        Details of a Card Holder.
+
+        More information here:
+        CardHolderInfo
+
+        :param firstName: Shopper's first name. Maximum 100 characters.
+        :param lastName: Shopper's last name. Maximum 100 characters.
+        :param personalIdentificationNumber: The shopper's local personal identification number.
+            These are the ID types per country:
+            Argentina - DNI (length 7-11 chars)
+            Brazil - CPF/CNPJ (length 11-14 chras)
+            Chile - RUN (length 8-9 chars)
+            Colombia - CC (length 6-10 chars)
+            Mexico - CURP/RFC (length 10-18 chars)
+        :param merchantShopperId: A merchant's ID for a specific shopper, up to 50 characters.
+        :param address: Shopper's address line 1. Maximum 100 characters.
+        :param address2: Shopper's address line 2. Maximum 100 characters.
+        :param city: Shopper's city. Between 2-42 characters.
+        :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
+        :param country: Based on https://developers.bluesnap.com/docs/country-codes
+        :param zip: Shopper's ZIP code. Maximum 20 characters.
+        :param email: Shopper's email address. Between 3-100 characters.
+        :param phone: Shopper's phone number. Between 2-36 characters.
+        '''
+
+        # Call base class init
+        super(CardHolderInfo, self).__init__()
+
+        if not firstName or not lastName:
+            raise ValueError('firstName and lastName are required.')
+
+        self.firstName = firstName
+        self.lastName = lastName
+        self.personalIdentificationNumber = personalIdentificationNumber
+        self.merchantShopperId = merchantShopperId
+        self.address = address
+        self.address2 = address2
+        self.city = city
+        self.state = state
+        self.country = country
+        self.zip = zip
+        self.email = email
+        self.phone = phone
+
+    def toDict(self) -> dict:
+        result = {
+            "firstName": self.firstName,
+            "lastName": self.lastName,
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "personalIdentificationNumber",
+                "merchantShopperId",
+                "address",
+                "address2",
+                "city",
+                "state",
+                "country",
+                "zip",
+                "email",
+                "phone",
+            ]
+        )
+
+        return result
+
 class BillingContactInfo(DictableObject):
 
     def __init__(
@@ -545,7 +637,6 @@ class VaultedShopperInfo(DictableObject):
                 "email",
                 "phone",
                 "fraudSessionId",
-                "shopperIpAddress",
             ]
         )
 
@@ -844,9 +935,12 @@ class TransactionResource(Resource):
 
     def authCapture(
             self,
-            vaultedShopperId: str,
             amount: str,
             currency: str,
+
+            vaultedShopperId: str = None,
+            pfToken: str = None,
+            cardHolderInfo: CardHolderInfo = None,
 
             merchantTransactionId: str = None,
             softDescriptor: str = None,
@@ -864,9 +958,11 @@ class TransactionResource(Resource):
 
         https://developers.bluesnap.com/v8976-JSON/docs/auth-capture
 
-        :param vaultedShopperId:
         :param amount:
         :param currency:
+        :param vaultedShopperId:
+        :param pfToken:
+        :param cardHolderInfo:
         :param merchantTransactionId: Merchant's unique ID for a new transaction. Between 1-50 characters.
         :param softDescriptor: Description of the transaction, which appears on the shopper's credit card statement.
             Maximum 20 characters. Overrides merchant default value.
@@ -879,46 +975,16 @@ class TransactionResource(Resource):
 
         return self._executeTransaction(
             cardTransactionType="AUTH_CAPTURE",
-            vaultedShopperId=vaultedShopperId,
             amount=amount,
             currency=currency,
+            vaultedShopperId=vaultedShopperId,
+            pfToken=pfToken,
+            cardHolderInfo=cardHolderInfo,
             merchantTransactionId=merchantTransactionId,
             softDescriptor=softDescriptor,
             descriptorPhoneNumber=descriptorPhoneNumber,
             level3Data=level3Data,
             transactionMetadataObjectList=transactionMetadataObjectList
-        )
-
-    def auth(
-            self,
-            vaultedShopperId: str,
-            amount: str,
-            currency: str
-    ) -> dict:
-        '''
-        Auth Only is a request to check whether a credit card is valid and has the funds to complete a specific
-        transaction (i.e. purchase). It does not actually run the charge on the card, but does temporarily hold
-        the funds aside. Note that each credit card company will only hold the authorization for a limited period
-        (for example, 3-10 days, depending on the credit card scheme).
-
-        Zero value auth for card validity checks:
-
-        If you wish to check the validity of a card without authorizing any charge amount, simply enter 0 as the
-        value for the amount property in this request.
-
-        https://developers.bluesnap.com/v8976-JSON/docs/auth-only
-
-        :param vaultedShopperId:
-        :param amount:
-        :param currency:
-        :return:
-        '''
-
-        return self._executeTransaction(
-            cardTransactionType="AUTH_ONLY",
-            vaultedShopperId=vaultedShopperId,
-            amount=amount,
-            currency=currency,
         )
 
     def retrieve(self, transactionId: str) -> dict:
@@ -935,12 +1001,52 @@ class TransactionResource(Resource):
 
         return dict(body['card-transaction'])
 
+    def auth(
+            self,
+            amount: str,
+            currency: str,
+            vaultedShopperId: str = None,
+            pfToken: str = None,
+            cardHolderInfo: CardHolderInfo = None,
+    ) -> dict:
+        '''
+        Auth Only is a request to check whether a credit card is valid and has the funds to complete a specific
+        transaction (i.e. purchase). It does not actually run the charge on the card, but does temporarily hold
+        the funds aside. Note that each credit card company will only hold the authorization for a limited period
+        (for example, 3-10 days, depending on the credit card scheme).
+
+        Zero value auth for card validity checks:
+
+        If you wish to check the validity of a card without authorizing any charge amount, simply enter 0 as the
+        value for the amount property in this request.
+
+        https://developers.bluesnap.com/v8976-JSON/docs/auth-only
+
+        :param amount:
+        :param currency:
+        :param vaultedShopperId:
+        :param pfToken:
+        :param cardHolderInfo:
+        :return:
+        '''
+
+        return self._executeTransaction(
+            cardTransactionType="AUTH_ONLY",
+            amount=amount,
+            currency=currency,
+            vaultedShopperId=vaultedShopperId,
+            pfToken=pfToken,
+            cardHolderInfo=cardHolderInfo,
+        )
+
     def _executeTransaction(
             self,
             cardTransactionType: str,
-            vaultedShopperId: str,
             amount: str,
             currency: str,
+            vaultedShopperId: str = None,
+            pfToken: str = None,
+            cardHolderInfo: CardHolderInfo = None,
             merchantTransactionId: str = None,
             softDescriptor: str = None,
             descriptorPhoneNumber: str = None,
@@ -960,11 +1066,25 @@ class TransactionResource(Resource):
         '''
 
         data = {
-            "vaultedShopperId": vaultedShopperId,
             "amount": amount,
             "currency": currency,
             "cardTransactionType": cardTransactionType,
         }
+
+        if not pfToken and not vaultedShopperId:
+            raise RuntimeError("Must supply either vaultedShopperId or pfToken.")
+
+        if vaultedShopperId:
+            pfToken = None
+
+        if vaultedShopperId:
+            data["vaultedShopperId"] = vaultedShopperId
+
+        if pfToken:
+            data["pfToken"] = pfToken
+
+        if cardHolderInfo:
+            data['cardHolderInfo'] = cardHolderInfo.toDict()
 
         if merchantTransactionId:
             data['merchantTransactionId'] = merchantTransactionId
