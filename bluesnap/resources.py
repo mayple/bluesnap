@@ -1,5 +1,6 @@
 import re
 from abc import abstractmethod
+from typing import List
 from urllib.parse import urlparse
 
 import requests
@@ -300,9 +301,7 @@ class ShippingContactInfo(DictableObject):
         return result
 
 
-
 class CardHolderInfo(DictableObject):
-
     '''
     A Vaulted Shopper Info object, containing some of the fields defined here:
     https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
@@ -391,6 +390,7 @@ class CardHolderInfo(DictableObject):
         )
 
         return result
+
 
 class BillingContactInfo(DictableObject):
 
@@ -650,7 +650,6 @@ class VaultedShopperInfo(DictableObject):
 
 
 class Level3DataItem(DictableObject):
-
     '''
     Contains Level 2/3 data properties for each item purchased
     https://developers.bluesnap.com/v8976-JSON/docs/level3dataitems
@@ -735,8 +734,8 @@ class Level3DataItem(DictableObject):
 
         return result
 
-class Level3Data(DictableObject):
 
+class Level3Data(DictableObject):
     '''
     Contains Level 2/3 data properties for the transaction
 
@@ -764,16 +763,16 @@ class Level3Data(DictableObject):
         super(Level3Data, self).__init__()
 
         self.customerReferenceNumber = customerReferenceNumber
-        self.salesTaxAmount          = salesTaxAmount
-        self.freightAmount           = freightAmount
-        self.dutyAmount              = dutyAmount
-        self.destinationZipCode      = destinationZipCode
-        self.destinationCountryCode  = destinationCountryCode
-        self.shipFromZipCode         = shipFromZipCode
-        self.discountAmount          = discountAmount
-        self.taxAmount               = taxAmount
-        self.taxRate                 = taxRate
-        self.level3DataItems         = level3DataItems
+        self.salesTaxAmount = salesTaxAmount
+        self.freightAmount = freightAmount
+        self.dutyAmount = dutyAmount
+        self.destinationZipCode = destinationZipCode
+        self.destinationCountryCode = destinationCountryCode
+        self.shipFromZipCode = shipFromZipCode
+        self.discountAmount = discountAmount
+        self.taxAmount = taxAmount
+        self.taxRate = taxRate
+        self.level3DataItems = level3DataItems
 
     def toDict(self) -> dict:
         result = {
@@ -808,7 +807,6 @@ class Level3Data(DictableObject):
 
 
 class CreditCard(DictableObject):
-
     '''
     Contains the details for a specific credit card, such as the card number and expiration date
 
@@ -819,6 +817,9 @@ class CreditCard(DictableObject):
     def __init__(
             self,
             cardLastFourDigits: str = None,
+            cardType: str = None,
+            expirationMonth: str = None,
+            expirationYear: str = None,
     ):
         '''
 
@@ -829,6 +830,9 @@ class CreditCard(DictableObject):
         super(CreditCard, self).__init__()
 
         self.cardLastFourDigits = cardLastFourDigits
+        self.cardType = cardType
+        self.expirationMonth = expirationMonth
+        self.expirationYear = expirationYear
 
     def toDict(self) -> dict:
         result = {
@@ -838,10 +842,77 @@ class CreditCard(DictableObject):
             resultDict=result,
             keys=[
                 "cardLastFourDigits",
+                "cardType"
+                "expirationMonth",
+                "expirationYear",
             ]
         )
 
         return result
+
+class CreditCardInfo(DictableObject):
+    '''
+    Contains credit card information for vaulted shoppers
+
+    More info:
+    https://developers.bluesnap.com/v8976-JSON/docs/payment-sources
+    '''
+
+    def __init__(
+            self,
+            billingContactInfo: BillingContactInfo = None,
+            creditCard: CreditCard = None,
+            pfToken: str = None,
+            status: str = None,
+    ):
+        '''
+        Used as part of the paymentSources array in calls related to Vaulted Shoppers.
+
+        Note: If status is included in the request, specify the card to be deleted by including cardType and
+        cardLastFourDigits within creditCard.
+
+        :param billingContactInfo: Contains billing contact information
+        :param creditCard: Contains the details for a specific credit card, such as the card number and expiration date
+        :param pfToken: Required if using Hosted Payment Fields. Do not include creditCard parameter if
+            using this token. Relevant only for Create Vaulted Shopper and Update Vaulted Shopper.
+        :param status: Enter "D" to delete the card from the shopper
+        '''
+
+        # Call base class init
+        super(CreditCardInfo, self).__init__()
+
+        if creditCard and pfToken:
+            raise Exception("Do not include creditCard parameter if using the pfToken parameter.")
+
+        if status == "D" and (not creditCard or not getattr(creditCard, 'cardLastFourDigits')):
+            raise Exception("If the status parameter is set as D, specify the card to be deleted by including "
+                            "cardType and cardLastFourDigits within creditCard.")
+
+        self.billingContactInfo = billingContactInfo
+        self.creditCard = creditCard
+        self.pfToken = pfToken
+        self.status = status
+
+    def toDict(self) -> dict:
+        result = {
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "status",
+                "pfToken"
+            ]
+        )
+
+        if self.billingContactInfo:
+            result["billingContactInfo"] = self.billingContactInfo.toDict()
+
+        if self.creditCard:
+            result["creditCard"] = self.creditCard.toDict()
+
+        return result
+
 
 
 
@@ -882,12 +953,10 @@ class VaultedShopperResource(Resource):
 
         return dict(body['vaulted-shopper'])
 
-    def createFromPaymentFieldsToken(
+    def create(
             self,
             vaultedShopperInfo: VaultedShopperInfo,
-            paymentFieldsTokenId: str,
-            billingContactInfo: BillingContactInfo,
-            # TODO: creditCard
+            paymentSource: List[CreditCardInfo],
             # TODO: ecpInfo
             # TODO: sepaDirectDebitInfo
     ) -> dict:
@@ -903,23 +972,19 @@ class VaultedShopperResource(Resource):
         https://developers.bluesnap.com/v8976-JSON/docs/create-vaulted-shopper
 
         :param vaultedShopperInfo: This is used for invoices, and to show information about the user in BlueSnap itself
-        :param paymentFieldsTokenId: Required if using Hosted Payment Fields. Do not include credit-card resource if
-            using this token
-        :param billingContactInfo: Contains billing contact information. This is connected to the payment method and
-            will NOT be used for invoicing, etc.
+        :param paymentSource: Contains payment source information for vaulted shoppers. More info:
+            https://developers.bluesnap.com/v8976-JSON/docs/payment-sources
         :return:
         '''
 
         data = {
             "paymentSources": {
                 "creditCardInfo": [
-                    {
-                        "pfToken": paymentFieldsTokenId,
-                        'billingContactInfo': billingContactInfo.toDict()
-                    }
+                    creditCardInfo.toDict() for creditCardInfo in paymentSource
                 ]
-            },
+            }
         }
+
         data.update(vaultedShopperInfo.toDict())
 
         response, body = self.request('POST', self.path, data=data)
@@ -929,7 +994,10 @@ class VaultedShopperResource(Resource):
     def update(
             self,
             vaultedShopperId: str,
-            vaultedShopperInfo: VaultedShopperInfo
+            vaultedShopperInfo: VaultedShopperInfo,
+            paymentSource: List[CreditCardInfo],
+            # TODO: ecpInfo
+            # TODO: sepaDirectDebitInfo
     ) -> dict:
         '''
         The Update Vaulted Shopper request enables you to update an existing vaulted shopper by changing their
@@ -942,18 +1010,26 @@ class VaultedShopperResource(Resource):
         :param vaultedShopperId:
         :param vaultedShopperInfo: Contains information about the vaulted shopper,
             More info here: https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
+        :param paymentFieldsTokenId: Required if using Hosted Payment Fields. Do not include credit-card resource if
+            using this token
+        :param billingContactInfo: Contains billing contact information. This is connected to the payment method and
+            will NOT be used for invoicing, etc.
         :return: The vaultedShopper object, which contains all details that are saved for that shopper.
 
         '''
 
-        data = { }
+        data = {
+            "paymentSources": {
+                "creditCardInfo": [
+                    creditCardInfo.toDict() for creditCardInfo in paymentSource
+                ]
+            }
+        }
         data.update(vaultedShopperInfo.toDict())
 
         response, body = self.request('PUT', '%s/%s' % (self.path, vaultedShopperId), data=data)
 
         return body
-
-    # TODO: Add credit card..
 
 class TransactionMetadata:
     '''
@@ -1093,6 +1169,7 @@ class TransactionResource(Resource):
             creditCard: CreditCard = None,
             pfToken: str = None,
             cardHolderInfo: CardHolderInfo = None,
+            transactionFraudInfo: TransactionFraudInfo = None,
     ) -> dict:
         '''
         Auth Only is a request to check whether a credit card is valid and has the funds to complete a specific
@@ -1113,6 +1190,7 @@ class TransactionResource(Resource):
         :param creditCard: Use this to select the credit card of the vaulted shopper.
         :param pfToken: Hosted Payment Fields token.
         :param cardHolderInfo: Required if supplying a pfToken.
+        :param transactionFraudInfo:
         :return:
         '''
 
@@ -1124,6 +1202,7 @@ class TransactionResource(Resource):
             creditCard=creditCard,
             pfToken=pfToken,
             cardHolderInfo=cardHolderInfo,
+            transactionFraudInfo=transactionFraudInfo,
         )
 
     def _executeTransaction(
@@ -1135,10 +1214,11 @@ class TransactionResource(Resource):
             creditCard: CreditCard = None,
             pfToken: str = None,
             cardHolderInfo: CardHolderInfo = None,
+            transactionFraudInfo: TransactionFraudInfo = None,
             merchantTransactionId: str = None,
             softDescriptor: str = None,
             descriptorPhoneNumber: str = None,
-            level3Data: Level3Data=None,
+            level3Data: Level3Data = None,
             transactionMetadataObjectList: list = (),
     ) -> dict:
         '''
@@ -1151,6 +1231,7 @@ class TransactionResource(Resource):
         :param creditCard: Use this to select the credit card of the vaulted shopper.
         :param pfToken: Hosted Payment Fields token.
         :param cardHolderInfo: Required if supplying a pfToken.
+        :param transactionFraudInfo:
         :param merchantTransactionId:
         :param softDescriptor:
         :param descriptorPhoneNumber:
@@ -1182,6 +1263,9 @@ class TransactionResource(Resource):
 
             if cardHolderInfo:
                 data['cardHolderInfo'] = cardHolderInfo.toDict()
+
+        if transactionFraudInfo:
+            data["transactionFraudInfo"] = transactionFraudInfo.toDict()
 
         if merchantTransactionId:
             data['merchantTransactionId'] = merchantTransactionId
