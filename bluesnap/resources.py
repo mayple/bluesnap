@@ -807,6 +807,44 @@ class Level3Data(DictableObject):
         return result
 
 
+class CreditCard(DictableObject):
+
+    '''
+    Contains the details for a specific credit card, such as the card number and expiration date
+
+    Required if sending card data or if vaulted shopper has multiple cards.
+    https://developers.bluesnap.com/v8976-JSON/docs/credit-card
+    '''
+
+    def __init__(
+            self,
+            cardLastFourDigits: str = None,
+    ):
+        '''
+
+        :param cardLastFourDigits: use if sending a vaulted shopper ID and the shopper has multiple saved credit cards.
+        '''
+
+        # Call base class init
+        super(CreditCard, self).__init__()
+
+        self.cardLastFourDigits = cardLastFourDigits
+
+    def toDict(self) -> dict:
+        result = {
+        }
+
+        self._setToDictIfHasValues(
+            resultDict=result,
+            keys=[
+                "cardLastFourDigits",
+            ]
+        )
+
+        return result
+
+
+
 class VaultedShopperResource(Resource):
     path = '/services/2/vaulted-shoppers'
 
@@ -826,6 +864,21 @@ class VaultedShopperResource(Resource):
         '''
 
         response, body = self.request('GET', '%s/%s' % (self.path, vaultedShopperId))
+
+        return dict(body['vaulted-shopper'])
+
+    def retrieveByMerchantShopperId(self, merchantShopperId: str) -> dict:
+        '''
+        The Retrieve Vaulted Shopper request retrieves all the saved details for the shopper associated with the
+        merchantShopperId you send in the request.
+
+        https://developers.bluesnap.com/v8976-JSON/docs/retrieve-vaulted-shopper
+
+        :param merchantShopperId:
+        :return:
+        '''
+
+        response, body = self.request('GET', '%s/merchant/%s' % (self.path, merchantShopperId))
 
         return dict(body['vaulted-shopper'])
 
@@ -873,6 +926,34 @@ class VaultedShopperResource(Resource):
 
         return body
 
+    def update(
+            self,
+            vaultedShopperId: str,
+            vaultedShopperInfo: VaultedShopperInfo
+    ) -> dict:
+        '''
+        The Update Vaulted Shopper request enables you to update an existing vaulted shopper by changing their
+        contact info, adding credit card details, or adding wallet details.
+
+        Note: It is suggested that you first retrieve the vaulted shopper and then modify the desired property.
+
+        More info: https://developers.bluesnap.com/v8976-JSON/docs/update-vaulted-shopper
+
+        :param vaultedShopperId:
+        :param vaultedShopperInfo: Contains information about the vaulted shopper,
+            More info here: https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
+        :return: The vaultedShopper object, which contains all details that are saved for that shopper.
+
+        '''
+
+        data = { }
+        data.update(vaultedShopperInfo.toDict())
+
+        response, body = self.request('PUT', '%s/%s' % (self.path, vaultedShopperId), data=data)
+
+        return body
+
+    # TODO: Add credit card..
 
 class TransactionMetadata:
     '''
@@ -939,6 +1020,7 @@ class TransactionResource(Resource):
             currency: str,
 
             vaultedShopperId: str = None,
+            creditCard: CreditCard = None,
             pfToken: str = None,
             cardHolderInfo: CardHolderInfo = None,
 
@@ -961,8 +1043,9 @@ class TransactionResource(Resource):
         :param amount:
         :param currency:
         :param vaultedShopperId:
-        :param pfToken:
-        :param cardHolderInfo:
+        :param creditCard: Use this to select the credit card of the vaulted shopper.
+        :param pfToken: Hosted Payment Fields token.
+        :param cardHolderInfo: Required if supplying a pfToken.
         :param merchantTransactionId: Merchant's unique ID for a new transaction. Between 1-50 characters.
         :param softDescriptor: Description of the transaction, which appears on the shopper's credit card statement.
             Maximum 20 characters. Overrides merchant default value.
@@ -978,6 +1061,7 @@ class TransactionResource(Resource):
             amount=amount,
             currency=currency,
             vaultedShopperId=vaultedShopperId,
+            creditCard=creditCard,
             pfToken=pfToken,
             cardHolderInfo=cardHolderInfo,
             merchantTransactionId=merchantTransactionId,
@@ -1006,6 +1090,7 @@ class TransactionResource(Resource):
             amount: str,
             currency: str,
             vaultedShopperId: str = None,
+            creditCard: CreditCard = None,
             pfToken: str = None,
             cardHolderInfo: CardHolderInfo = None,
     ) -> dict:
@@ -1025,8 +1110,9 @@ class TransactionResource(Resource):
         :param amount:
         :param currency:
         :param vaultedShopperId:
-        :param pfToken:
-        :param cardHolderInfo:
+        :param creditCard: Use this to select the credit card of the vaulted shopper.
+        :param pfToken: Hosted Payment Fields token.
+        :param cardHolderInfo: Required if supplying a pfToken.
         :return:
         '''
 
@@ -1035,6 +1121,7 @@ class TransactionResource(Resource):
             amount=amount,
             currency=currency,
             vaultedShopperId=vaultedShopperId,
+            creditCard=creditCard,
             pfToken=pfToken,
             cardHolderInfo=cardHolderInfo,
         )
@@ -1045,6 +1132,7 @@ class TransactionResource(Resource):
             amount: str,
             currency: str,
             vaultedShopperId: str = None,
+            creditCard: CreditCard = None,
             pfToken: str = None,
             cardHolderInfo: CardHolderInfo = None,
             merchantTransactionId: str = None,
@@ -1057,10 +1145,16 @@ class TransactionResource(Resource):
         Internal, perform an auth/capture operation.
 
         :param cardTransactionType:
-        :param vaultedShopperId:
         :param amount:
         :param currency:
+        :param vaultedShopperId:
+        :param creditCard: Use this to select the credit card of the vaulted shopper.
+        :param pfToken: Hosted Payment Fields token.
+        :param cardHolderInfo: Required if supplying a pfToken.
+        :param merchantTransactionId:
         :param softDescriptor:
+        :param descriptorPhoneNumber:
+        :param level3Data:
         :param transactionMetadataObjectList:
         :return:
         '''
@@ -1080,11 +1174,14 @@ class TransactionResource(Resource):
         if vaultedShopperId:
             data["vaultedShopperId"] = vaultedShopperId
 
+            if creditCard:
+                data["creditCard"] = creditCard.toDict()
+
         if pfToken:
             data["pfToken"] = pfToken
 
-        if cardHolderInfo:
-            data['cardHolderInfo'] = cardHolderInfo.toDict()
+            if cardHolderInfo:
+                data['cardHolderInfo'] = cardHolderInfo.toDict()
 
         if merchantTransactionId:
             data['merchantTransactionId'] = merchantTransactionId
