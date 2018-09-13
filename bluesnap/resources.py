@@ -536,7 +536,7 @@ class VaultedShopperInfo(DictableObject):
             lastName: str,
             companyName: str = None,
             personalIdentificationNumber: str = None,
-            shopperCurrency: str = 'USD',
+            shopperCurrency: str = None,
             softDescriptor: str = None,
             descriptorPhoneNumber: str = None,
             merchantShopperId: str = None,
@@ -842,7 +842,7 @@ class CreditCard(DictableObject):
             resultDict=result,
             keys=[
                 "cardLastFourDigits",
-                "cardType"
+                "cardType",
                 "expirationMonth",
                 "expirationYear",
             ]
