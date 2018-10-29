@@ -188,8 +188,12 @@ class PaymentFieldsTokenResource(Resource):
     '''
     path = '/services/2/payment-fields-tokens'
 
-    def __init__(self):
+    def __init__(
+        self,
+        shopperID: str = None
+    ):
         self._tokenId = None
+        self.shopperID = None
         super(PaymentFieldsTokenResource, self).__init__()
 
     def create(self):
@@ -200,7 +204,12 @@ class PaymentFieldsTokenResource(Resource):
         # noinspection PyPep8Naming
         E = self.client.E
 
-        response, body = self.request('POST', self.path)
+        if self.shopperID is not None:
+            _url = '%s/%s' % (self.path, self.shopperID)
+        else:
+            _url = self.path
+
+        response, body = self.request('POST', _url)
 
         locationHeader = response.headers['Location']
         self._tokenId = locationHeader.split('/')[-1]
