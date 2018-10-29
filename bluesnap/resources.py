@@ -193,7 +193,7 @@ class PaymentFieldsTokenResource(Resource):
         shopperID: str = None
     ):
         self._tokenId = None
-        self.shopperID = None
+        self.shopperID = shopperID
         super(PaymentFieldsTokenResource, self).__init__()
 
     def create(self):
