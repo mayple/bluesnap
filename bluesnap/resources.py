@@ -205,7 +205,7 @@ class PaymentFieldsTokenResource(Resource):
         E = self.client.E
 
         if self.shopperID is not None:
-            _url = '%s/%s' % (self.path, self.shopperID)
+            _url = '%s?shopperId=%s' % (self.path, self.shopperID)
         else:
             _url = self.path
 
