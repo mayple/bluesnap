@@ -18,7 +18,11 @@ class APIError(Exception):
             if isinstance(self.messages, str):
                 string = self.messages
             if isinstance(self.messages, list):
-                string = json.dumps(self.messages, indent=2)
+                if len(self.messages) == 1:
+                    string = self.messages[0].description
+                    string += '(BlueSnap Error %s, code %s)' % (self.messages[0].erroName, self.messages[0].code)
+                else:
+                    string = json.dumps(self.messages, indent=2)
 
         if self.code is not None:
             string += ' (BlueSnap error code was {0})'.format(self.code)
