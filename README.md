@@ -2,11 +2,11 @@
 
 [![PyPI version](https://badge.fury.io/py/bluesnap.svg)](https://badge.fury.io/py/bluesnap)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/bluesnap.svg)](https://pypi.python.org/pypi/bluesnap/)
-[![Build Status](https://travis-ci.com/selectom/bluesnap.svg?branch=master)](https://travis-ci.com/selectom/bluesnap)
+[![Build Status](https://travis-ci.com/mayple/bluesnap.svg?branch=master)](https://travis-ci.com/mayple/bluesnap)
 
 > A Python 3 module to interact with the Bluesnap API.
 
-Developed in [Selectom](https://www.selectom.com).
+Developed in [Mayple](https://www.mayple.com).
 
 ## Install
 
@@ -201,7 +201,7 @@ You might also be interested in these projects:
 
 ## Contributing
 
-Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/selectom/bluesnap/issues/new).
+Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/mayple/bluesnap/issues/new).
 
 Install with:
 ```sh
