@@ -26,6 +26,7 @@ setup(
     license='LICENSE',
     description='A Python 3 module to interact with the Bluesnap API.',
     long_description=long_description,
+    long_description_content_type="text/markdown",
     packages=find_packages(),
     install_requires=requires,
     setup_requires=requires,
