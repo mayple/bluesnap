@@ -277,8 +277,7 @@ class ShippingContactInfo(DictableObject):
         super(ShippingContactInfo, self).__init__()
 
         if not firstName or not lastName or not address1 or not city or not zip or not country:
-            raise ValueError('firstName, lastName, address1, city, zip and country are '
-                             'required are required.')
+            raise ValueError('firstName, lastName, address1, city, zip and country are required.')
 
         self.firstName = firstName
         self.lastName = lastName
@@ -441,10 +440,23 @@ class BillingContactInfo(DictableObject):
         # Call base class init
         super(BillingContactInfo, self).__init__()
 
-        if not firstName or not lastName or not address1 or not city or not zip or not country or \
-                not personalIdentificationNumber:
-            raise ValueError('firstName, lastName, address1, city, zip, country and personalIdentificationNumber are '
-                             'required are required.')
+        if not firstName or not lastName or not address1 or not city or not zip or not country:
+            raise ValueError('firstName, lastName, address1, city, zip and country '
+                             'are required.')
+
+        # In one of the countries that required a personal identification number?
+        # https://developers.bluesnap.com/v8976-JSON/docs/billing-contact-info
+        if country.lower() in {
+            'ar', # Argentina
+            'br', # Brazil
+            'cl', # Chile
+            'co', # Colombia
+            'mx', # Mexico
+            'il', # Israel
+        }:
+            if not personalIdentificationNumber:
+                raise ValueError('personalIdentificationNumber is required for country %s.' % country)
+
 
         self.firstName = firstName
         self.lastName = lastName
@@ -464,7 +476,6 @@ class BillingContactInfo(DictableObject):
             "city": self.city,
             "zip": self.zip,
             "country": self.country,
-            "personalIdentificationNumber": self.personalIdentificationNumber,
         }
 
         self._setToDictIfHasValues(
@@ -472,6 +483,7 @@ class BillingContactInfo(DictableObject):
             keys=[
                 "address2",
                 "state",
+                "personalIdentificationNumber",
             ]
         )
 

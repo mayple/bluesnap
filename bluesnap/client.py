@@ -16,7 +16,7 @@ def default_user_agent():
     import platform
     from .version import __version__
     library_versions = 'requests {}; python {}'.format(requests.__version__, platform.version())
-    return 'selectom/bluesnap {} ({})'.format(__version__, library_versions)
+    return 'mayple/bluesnap {} ({})'.format(__version__, library_versions)
 
 
 def format_request(req):

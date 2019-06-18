@@ -1,5 +1,8 @@
 import re
 import json
+import logging
+
+log = logging.getLogger(__name__)
 
 class APIError(Exception):
     """
@@ -12,25 +15,33 @@ class APIError(Exception):
         self.status_code = status_code
 
     def __str__(self):
-        if self.description not in (None, 'None'):
-            string = self.description
-        else:
-            if isinstance(self.messages, str):
-                string = self.messages
-            if isinstance(self.messages, list):
-                if len(self.messages) == 1:
-                    string = self.messages[0].description
-                    string += '(BlueSnap Error %s, code %s)' % (self.messages[0].erroName, self.messages[0].code)
-                else:
-                    string = json.dumps(self.messages, indent=2)
+        outputString = ""
+        try:
+            if self.description not in (None, 'None'):
+                outputString = self.description
+            else:
+                if isinstance(self.messages, str):
+                    outputString = self.messages
+                if isinstance(self.messages, list):
+                    if len(self.messages) == 1:
+                        outputString = self.messages[0].get('description', 'no-description')
+                        outputString += ' (BlueSnap Error %s, code %s)' % (
+                            self.messages[0].get('errorName', 'no-errorName'),
+                            self.messages[0].get('code', 'no-code')
+                        )
+                    else:
+                        outputString = json.dumps(self.messages, indent=2)
 
-        if self.code is not None:
-            string += ' (BlueSnap error code was {0})'.format(self.code)
+            if self.code is not None:
+                outputString += ' (BlueSnap error code was {0})'.format(self.code)
 
-        if self.status_code is not None:
-            string += ' (HTTP status code was {status_code})'.format(status_code=self.status_code)
+            if self.status_code is not None:
+                outputString += ' (HTTP status code was {status_code})'.format(status_code=self.status_code)
+        except Exception:
+            log.exception('Problem stringifying APIError object.')
+            outputString += json.dumps(self.messages, indent=2)
 
-        return string
+        return outputString
 
 
 class CardError(Exception):

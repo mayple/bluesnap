@@ -9,6 +9,7 @@ here = path.abspath(path.dirname(__file__))
 __version__ = None
 with open('bluesnap/version.py') as f:
     exec(f.read())
+
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
@@ -20,8 +21,8 @@ setup(
     name='bluesnap',
     version=__version__,
     author='Alon Diamant',
-    author_email='alon@selectom.com',
-    url='https://github.com/selectom/bluesnap',
+    author_email='alon@mayple.com',
+    url='https://github.com/mayple/bluesnap',
     license='LICENSE',
     description='A Python 3 module to interact with the Bluesnap API.',
     long_description=long_description,
