@@ -189,47 +189,56 @@ class Client(object):
         :param body: Messages may contain in <xml/> or <messages><message/></messages>
         """
 
-        try:  # <xml>message</xml>
-            if body:
-                description = body['xml']
-            else:
-                description = '<no response body>'
-            raise APIError(description=description,
-                           status_code=response.status_code)
-        except (KeyError, ValueError) as e:
+        description = None
 
-            if useJsonApi:
-                try: # json: {'message': [{'errorName': '...', 'code': '...', 'description': '...'}]}
-                    body = {
-                        'messages': body
-                    }
-                except Exception as e2:
-                    pass
+        if not body:
+            description = '<no response body>'
+        elif not isinstance(body, dict):
+            description = body
+        elif 'xml' in body:
+            description = body['xml']
+        elif useJsonApi:
+            # Format in this case is:
+            # json: {'message': [{'errorName': '...', 'code': '...', 'description': '...'}]}
+            # We force the body into a structure containing a 'messages' key, which is what we would have gotten
+            # from the XML format.. so the code below supports both APIs.
+            body = {
+                'messages': body
+            }
 
-            try:  # <messages><message><description>message</description></message></messages>
-                if isinstance(body['messages']['message'], list):  # Multiple <message/> elements
-                    raise APIError(messages=body['messages']['message'],
-                                   status_code=response.status_code)
-                else:  # Only 1 <message/> element
-                    code = body['messages']['message'].get('code', None)
+        if description:
+            raise APIError(
+                description=description,
+               status_code=response.status_code
+            )
 
-                    if code is not None and code in self.CARD_ERROR_CODES:  # Found a CardError
-                        klass = CardError
-                    else:
-                        klass = APIError
-
-                    raise klass(description=body['messages']['message']['description'],
-                                code=code,
-                                status_code=response.status_code)
-
-            except APIError as ae:
-                raise
-            except CardError as ce:
-                raise
-            except Exception as e2:  # I don't understand how to interpret this API error
+        try:  # <messages><message><description>message</description></message></messages>
+            if isinstance(body.get('messages', {}).get('message', None), list):  # Multiple <message/> elements
                 raise APIError(
-                    description='Invalid messages object in response from API: {body}'.format(body=body),
-                    status_code=response.status_code)
+                    messages=body['messages']['message'],
+                    status_code=response.status_code
+                )
+            else:  # Only 1 <message/> element
+                code = body.get('messages', {}).get('message', {}).get('code', None)
+
+                if code is not None and code in self.CARD_ERROR_CODES:  # Found a CardError
+                    klass = CardError
+                else:
+                    klass = APIError
+
+                raise klass(
+                    description=body['messages']['message']['description'],
+                    code=code,
+                    status_code=response.status_code
+                )
+
+        except (APIError, CardError):
+            raise
+        except Exception:
+            raise APIError(
+                description='Invalid messages object in response from API: {body}'.format(body=body),
+                status_code=response.status_code
+            )
 
 __client__ = None
 

@@ -124,4 +124,4 @@ com_crashlytics_export_strings.xml
 .env
 .venv
 
-scratch.py
+scratch*.py
