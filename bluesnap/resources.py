@@ -190,34 +190,28 @@ class PaymentFieldsTokenResource(Resource):
 
     def __init__(
         self,
-        shopperID: str = None
     ):
-        self._tokenId = None
-        self.shopperID = shopperID
         super(PaymentFieldsTokenResource, self).__init__()
 
-    def create(self):
+    def create(
+            self,
+            shopperId: str = None
+    ):
         '''
         Create a Hosted Payment Fields token by sending a server-to-server POST request to BlueSnap
         :return:
         '''
-        # noinspection PyPep8Naming
-        E = self.client.E
 
-        if self.shopperID is not None:
-            _url = '%s?shopperId=%s' % (self.path, self.shopperID)
+        if shopperId is not None:
+            _url = '%s?shopperId=%s' % (self.path, shopperId)
         else:
             _url = self.path
 
         response, body = self.request('POST', _url)
 
         locationHeader = response.headers['Location']
-        self._tokenId = locationHeader.split('/')[-1]
-        return self._tokenId
-
-    def tokenId(self):
-        return self._tokenId
-
+        tokenId = locationHeader.split('/')[-1]
+        return tokenId
 
 class DictableObject:
 
@@ -1004,7 +998,6 @@ class VaultedShopperResource(Resource):
     path = '/services/2/vaulted-shoppers'
 
     def __init__(self):
-        self._tokenId = None
         super(VaultedShopperResource, self).__init__()
 
     def retrieve(self, vaultedShopperId: str) -> dict:

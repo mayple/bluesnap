@@ -1,2 +1,6 @@
 More info here:
 https://packaging.python.org/tutorials/distributing-packages/
+
+1. python3 setup.py sdist bdist_wheel
+2. python3 -m twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+3. twine upload dist/*
