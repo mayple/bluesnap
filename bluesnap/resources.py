@@ -1,6 +1,6 @@
 import re
 from abc import abstractmethod
-from typing import List
+from typing import List, Optional
 from urllib.parse import urlparse
 
 import requests
@@ -192,7 +192,7 @@ class PaymentFieldsTokenResource(Resource):
     path = '/services/2/payment-fields-tokens'
 
     def __init__(
-        self,
+            self,
     ):
         super(PaymentFieldsTokenResource, self).__init__()
 
@@ -289,11 +289,11 @@ class ShippingContactInfo(DictableObject):
     def toDict(self) -> dict:
         result = {
             "firstName": self.firstName,
-            "lastName": self.lastName,
-            "address1": self.address1,
-            "city": self.city,
-            "zip": self.zip,
-            "country": self.country,
+            "lastName":  self.lastName,
+            "address1":  self.address1,
+            "city":      self.city,
+            "zip":       self.zip,
+            "country":   self.country,
         }
 
         self._setToDictIfHasValues(
@@ -376,7 +376,7 @@ class CardHolderInfo(DictableObject):
     def toDict(self) -> dict:
         result = {
             "firstName": self.firstName,
-            "lastName": self.lastName,
+            "lastName":  self.lastName,
         }
 
         self._setToDictIfHasValues(
@@ -468,11 +468,11 @@ class BillingContactInfo(DictableObject):
     def toDict(self) -> dict:
         result = {
             "firstName": self.firstName,
-            "lastName": self.lastName,
-            "address1": self.address1,
-            "city": self.city,
-            "zip": self.zip,
-            "country": self.country,
+            "lastName":  self.lastName,
+            "address1":  self.address1,
+            "city":      self.city,
+            "zip":       self.zip,
+            "country":   self.country,
         }
 
         self._setToDictIfHasValues(
@@ -634,7 +634,7 @@ class VaultedShopperInfo(DictableObject):
     def toDict(self) -> dict:
         result = {
             "firstName": self.firstName,
-            "lastName": self.lastName,
+            "lastName":  self.lastName,
         }
 
         self._setToDictIfHasValues(
@@ -1161,8 +1161,8 @@ class TransactionMetadata:
     def toDict(self) -> dict:
 
         return {
-            "metaValue": self.value,
-            "metaKey": self.key,
+            "metaValue":       self.value,
+            "metaKey":         self.key,
             "metaDescription": self.description
         }
 
@@ -1245,6 +1245,8 @@ class TransactionResource(Resource):
         Retrieve is a request that gets details about a past transaction, such as the transaction type, amount,
         cardholder or vaulted shopper, credit card, processing info, and so on.
 
+        https://developers.bluesnap.com/v8976-JSON/docs/retrieve
+
         :param transactionId: transaction ID received in the response from BlueSnap
         :return:
         """
@@ -1322,30 +1324,91 @@ class TransactionResource(Resource):
             transactionMetadataObjectList=transactionMetadataObjectList,
         )
 
+    def capture(
+            self,
+            transactionId: str,
+            amount: str,
+            softDescriptor: str = None,
+            level3Data: Level3Data = None,
+            transactionMetadataObjectList: list = ()
+    ) -> dict:
+        """
+        Capture is a request that submits a previously authorized transaction for settlement (i.e. payment by the
+        shopper). Note that each credit card company will only hold the authorization for a limited period (for
+        example, 3-10 days, depending on the credit card scheme).
+
+        Before you can send a transaction for capture, you must send it for authorization using the Auth Only request.
+
+        The capture will be performed based on the details that were in the Auth Only request (currency, credit card,
+        etc.).
+
+        https://developers.bluesnap.com/v8976-JSON/docs/capture
+
+        :param transactionId: transaction ID received in the response from BlueSnap
+        :param amount:  default value is the full authorization amount
+        :param softDescriptor: Description of the transaction, which appears on the shopper's credit card statement.
+            Maximum 20 characters. Overrides merchant default value.
+        :param level3Data: Contains Level 2/3 data properties for the transaction
+        :param transactionMetadataObjectList:
+        :return:
+        """
+
+        return self._executeTransaction(
+            cardTransactionType="CAPTURE",
+            transactionId=transactionId,
+            amount=amount,
+            softDescriptor=softDescriptor,
+            level3Data=level3Data,
+            transactionMetadataObjectList=transactionMetadataObjectList
+        )
+
+    def reverse(self, transactionId: str) -> dict:
+
+        """
+        Auth Reversal is a request that reverses, or voids, a previously approved authorization that has not yet
+        been captured.
+        Note: The reversal must be performed within 8 days of the initial Auth Only request, or else an error will
+        occur.
+
+        An Auth Reversal will void the entire transaction amount, so the amount property is not relevant.
+
+        https://developers.bluesnap.com/v8976-JSON/docs/auth-reversal
+
+        :param transactionId: transaction ID received in the response from BlueSnap
+        :return:
+        """
+
+        return self._executeTransaction(
+            cardTransactionType="AUTH_REVERSAL",
+            transactionId=transactionId,
+        )
+
     def _executeTransaction(
             self,
             cardTransactionType: str,
-            transactionInitiator: str,
-            amount: str,
-            currency: str,
-            vaultedShopperId: str = None,
-            creditCard: CreditCard = None,
-            pfToken: str = None,
-            cardHolderInfo: CardHolderInfo = None,
-            transactionFraudInfo: TransactionFraudInfo = None,
-            merchantTransactionId: str = None,
-            softDescriptor: str = None,
-            descriptorPhoneNumber: str = None,
-            level3Data: Level3Data = None,
-            networkTransactionInfo: NetworkTransactionInfo = None,
-            threeDSecure: ThreeDSecure = None,
-            transactionOrderSource: str = None,
+            transactionId: Optional[str] = None,
+            transactionInitiator: Optional[str] = None,
+            amount: Optional[str] = None,
+            currency: Optional[str] = None,
+            vaultedShopperId: Optional[str] = None,
+            creditCard: Optional[CreditCard] = None,
+            pfToken: Optional[str] = None,
+            cardHolderInfo: Optional[CardHolderInfo] = None,
+            transactionFraudInfo: Optional[TransactionFraudInfo] = None,
+            merchantTransactionId: Optional[str] = None,
+            softDescriptor: Optional[str] = None,
+            descriptorPhoneNumber: Optional[str] = None,
+            level3Data: Optional[Level3Data] = None,
+            networkTransactionInfo: Optional[NetworkTransactionInfo] = None,
+            threeDSecure: Optional[ThreeDSecure] = None,
+            transactionOrderSource: Optional[str] = None,
             transactionMetadataObjectList: list = (),
     ) -> dict:
         """
         Internal, perform an auth/capture operation.
 
         :param cardTransactionType:
+        :param transactionId:
         :param transactionInitiator: Identifies who initiated the order. Options are:
             MERCHANT (for MIT)
             SHOPPER (for CIT)
@@ -1369,17 +1432,25 @@ class TransactionResource(Resource):
         """
 
         data = {
-            "amount": amount,
-            "currency": currency,
-            "cardTransactionType": cardTransactionType,
-            "transactionInitiator": transactionInitiator,
+            "cardTransactionType":  cardTransactionType,
         }
 
         if not pfToken and not vaultedShopperId:
             raise RuntimeError("Must supply either vaultedShopperId or pfToken.")
 
-        if not transactionInitiator in {"SHOPPER", "MERCHANT"}:
-            raise RuntimeError("transactionInitiator must be SHOPPER or MERCHANT.")
+        if transactionId:
+            data["transactionId"] = transactionId
+
+        if transactionInitiator:
+            if not transactionInitiator in {"SHOPPER", "MERCHANT"}:
+                raise RuntimeError("transactionInitiator must be SHOPPER or MERCHANT.")
+            data["transactionInitiator"] = transactionInitiator
+
+        if amount:
+            data["amount"] = amount
+
+        if currency:
+            data["currency"] = currency
 
         if transactionOrderSource:
             if not transactionOrderSource == "MOTO":
