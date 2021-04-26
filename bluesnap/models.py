@@ -164,7 +164,7 @@ class ContactInfo(Model):
 
     def __init__(self, email,
                  first_name=None, last_name=None, address_1=None, city=None,
-                 zip=None, country=None, phone=None, client=None):
+                 zip_=None, country=None, phone=None, client=None):
         super(ContactInfo, self).__init__(
             client=client
         )
@@ -174,7 +174,7 @@ class ContactInfo(Model):
         self.last_name = last_name or self.NONE_PLACEHOLDER
         self.address_1 = address_1 or self.NONE_PLACEHOLDER
         self.city = city or self.NONE_PLACEHOLDER
-        self.zip = zip or self.NONE_PLACEHOLDER
+        self.zip = zip_ or self.NONE_PLACEHOLDER
         self.country = country or self.DEFAULT_COUNTRY
         self.phone = phone or self.NONE_PLACEHOLDER
 

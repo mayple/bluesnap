@@ -75,7 +75,7 @@ billingContactInfo = BillingContactInfo(
     address1="5 Somewhere",
     city="Tel Aviv",
     country="il",
-    zip="123456"
+    zip_="123456"
 )
 
 shippingContactInfo = ShippingContactInfo(
@@ -84,7 +84,7 @@ shippingContactInfo = ShippingContactInfo(
     address1="18 Otherplace",
     city="Ramat Gan",
     country="il",
-    zip="123123"
+    zip_="123123"
 )
 
 transactionFraudInfo = TransactionFraudInfo(
@@ -105,7 +105,7 @@ vaultedShopperInfo = VaultedShopperInfo(
     address="More Place 4",
     city="Givatayim",
     country="IL",
-    zip="123123",
+    zip_="123123",
     email="customer@email.com",
     phone="+972-123123123",
     shippingContactInfo=shippingContactInfo,

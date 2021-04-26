@@ -58,7 +58,7 @@ class ShopperTestCase(TestCase):
             first_name='John',
             last_name='Doe',
             email='test@justyoyo.com',
-            zip='SW5',
+            zip_='SW5',
             country='gb',
             phone='07777777777')
 
@@ -625,7 +625,7 @@ class OrderTestCase(TestCase):
             first_name='John',
             last_name='Doe',
             email='test@justyoyo.com',
-            zip='SW5',
+            zip_='SW5',
             country='gb',
             phone='07777777777')
 
