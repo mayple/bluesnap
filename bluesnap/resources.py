@@ -27,7 +27,7 @@ class Resource(object):
 class ShopperResource(Resource):
     shoppers_path = '/services/2/shoppers'
     shopper_path = shoppers_path + '/{shopper_id}'
-    shopper_id_path_pattern = re.compile('{}/(\d+)'.format(shoppers_path))  # /services/2/shoppers/(\d+)
+    shopper_id_path_pattern = re.compile(r'{}/(\d+)'.format(shoppers_path))  # /services/2/shoppers/(\d+)
 
     def find_by_shopper_id(self, shopper_id):
         """
@@ -83,6 +83,7 @@ class ShopperResource(Resource):
         :type contact_info: models.ContactInfo
         :type credit_card: models.AbstractCreditCard
         :param seller_shopper_id: Seller-specific shopper id
+        :param client_ip:
         :return: Returns the newly created BlueSnap shopper id
         """
         shopper_element = self._create_shopper_element(
@@ -103,6 +104,7 @@ class ShopperResource(Resource):
         :param shopper_id: BlueSnap shopper id
         :type contact_info: models.ContactInfo
         :type credit_card: models.AbstractCreditCard
+        :param client_ip:
         :rtype: bool
         """
         shopper_element = self._create_shopper_element(
@@ -124,6 +126,7 @@ class OrderResource(Resource):
         :type amount_in_pence: int
         :type credit_card: models.CreditCardSelection
         :param description: Order description
+        :param client_ip:
         :return:
         """
         # noinspection PyPep8Naming
@@ -175,7 +178,7 @@ class OrderResource(Resource):
 # ------------------
 
 class PaymentFieldsTokenResource(Resource):
-    '''
+    """
     If you would like to build your custom checkout flow using the API, but keep your PCI compliance requirements
     limited to the minimal SAQ-A level, BlueSnap’s Hosted Payment Fields are the ideal solution.
 
@@ -185,7 +188,7 @@ class PaymentFieldsTokenResource(Resource):
 
     https://developers.bluesnap.com/v8976-Tools/docs/hosted-payment-fields
 
-    '''
+    """
     path = '/services/2/payment-fields-tokens'
 
     def __init__(
@@ -197,10 +200,10 @@ class PaymentFieldsTokenResource(Resource):
             self,
             shopperId: str = None
     ):
-        '''
+        """
         Create a Hosted Payment Fields token by sending a server-to-server POST request to BlueSnap
         :return:
-        '''
+        """
 
         if shopperId is not None:
             _url = '%s?shopperId=%s' % (self.path, shopperId)
@@ -213,6 +216,7 @@ class PaymentFieldsTokenResource(Resource):
         tokenId = locationHeader.split('/')[-1]
         return tokenId
 
+
 class DictableObject:
 
     def __init__(self):
@@ -223,12 +227,12 @@ class DictableObject:
         raise NotImplementedError("Must implement this.")
 
     def _setToDictIfHasValue(self, resultDict: dict, key: str):
-        '''
+        """
         Set a value to a dict if it has a value
         :param resultDict:
         :param key:
         :return:
-        '''
+        """
 
         if hasattr(self, key) and getattr(self, key, None):
             resultDict[key] = getattr(self, key)
@@ -249,9 +253,9 @@ class ShippingContactInfo(DictableObject):
             city: str = None,
             state: str = None,
             country: str = None,
-            zip: str = None,
+            zip_: str = None,
     ):
-        '''
+        """
         Details of a Shipping Contact Info.
 
         More information here:
@@ -264,13 +268,13 @@ class ShippingContactInfo(DictableObject):
         :param city: Shopper's city. Between 2-42 characters.
         :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
         :param country: Based on https://developers.bluesnap.com/docs/country-codes
-        :param zip: Shopper's ZIP code. Maximum 20 characters.
-        '''
+        :param zip_: Shopper's ZIP code. Maximum 20 characters.
+        """
 
         # Call base class init
         super(ShippingContactInfo, self).__init__()
 
-        if not firstName or not lastName or not address1 or not city or not zip or not country:
+        if not firstName or not lastName or not address1 or not city or not zip_ or not country:
             raise ValueError('firstName, lastName, address1, city, zip and country are required.')
 
         self.firstName = firstName
@@ -280,7 +284,7 @@ class ShippingContactInfo(DictableObject):
         self.city = city
         self.state = state
         self.country = country
-        self.zip = zip
+        self.zip = zip_
 
     def toDict(self) -> dict:
         result = {
@@ -304,10 +308,10 @@ class ShippingContactInfo(DictableObject):
 
 
 class CardHolderInfo(DictableObject):
-    '''
+    """
     A Vaulted Shopper Info object, containing some of the fields defined here:
     https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
-    '''
+    """
 
     def __init__(
             self,
@@ -320,11 +324,11 @@ class CardHolderInfo(DictableObject):
             city: str = None,
             state: str = None,
             country: str = None,
-            zip: str = None,
+            zip_: str = None,
             email: str = None,
             phone: str = None,
     ):
-        '''
+        """
         Details of a Card Holder.
 
         More information here:
@@ -345,10 +349,10 @@ class CardHolderInfo(DictableObject):
         :param city: Shopper's city. Between 2-42 characters.
         :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
         :param country: Based on https://developers.bluesnap.com/docs/country-codes
-        :param zip: Shopper's ZIP code. Maximum 20 characters.
+        :param zip_: Shopper's ZIP code. Maximum 20 characters.
         :param email: Shopper's email address. Between 3-100 characters.
         :param phone: Shopper's phone number. Between 2-36 characters.
-        '''
+        """
 
         # Call base class init
         super(CardHolderInfo, self).__init__()
@@ -365,7 +369,7 @@ class CardHolderInfo(DictableObject):
         self.city = city
         self.state = state
         self.country = country
-        self.zip = zip
+        self.zip = zip_
         self.email = email
         self.phone = phone
 
@@ -406,9 +410,9 @@ class BillingContactInfo(DictableObject):
             city: str = None,
             state: str = None,
             country: str = None,
-            zip: str = None,
+            zip_: str = None,
     ):
-        '''
+        """
         Details of a Billing Contact Info.
 
         More information here:
@@ -428,29 +432,28 @@ class BillingContactInfo(DictableObject):
         :param city: Shopper's city. Between 2-42 characters.
         :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
         :param country: Based on https://developers.bluesnap.com/docs/country-codes
-        :param zip: Shopper's ZIP code. Maximum 20 characters.
-        '''
+        :param zip_: Shopper's ZIP code. Maximum 20 characters.
+        """
 
         # Call base class init
         super(BillingContactInfo, self).__init__()
 
-        if not firstName or not lastName or not address1 or not city or not zip or not country:
+        if not firstName or not lastName or not address1 or not city or not zip_ or not country:
             raise ValueError('firstName, lastName, address1, city, zip and country '
                              'are required.')
 
         # In one of the countries that required a personal identification number?
         # https://developers.bluesnap.com/v8976-JSON/docs/billing-contact-info
         if country.lower() in {
-            'ar', # Argentina
-            'br', # Brazil
-            'cl', # Chile
-            'co', # Colombia
-            'mx', # Mexico
-            'il', # Israel
+            'ar',  # Argentina
+            'br',  # Brazil
+            'cl',  # Chile
+            'co',  # Colombia
+            'mx',  # Mexico
+            'il',  # Israel
         }:
             if not personalIdentificationNumber:
                 raise ValueError('personalIdentificationNumber is required for country %s.' % country)
-
 
         self.firstName = firstName
         self.lastName = lastName
@@ -460,7 +463,7 @@ class BillingContactInfo(DictableObject):
         self.city = city
         self.state = state
         self.country = country
-        self.zip = zip
+        self.zip = zip_
 
     def toDict(self) -> dict:
         result = {
@@ -495,7 +498,7 @@ class TransactionFraudInfo(DictableObject):
             # TODO: enterpriseSiteId
             # TODO: enterpriseUdfs
     ):
-        '''
+        """
         Transaction Fraud Info class.
 
         More information here:
@@ -507,7 +510,7 @@ class TransactionFraudInfo(DictableObject):
         :param shopperIpAddress: Shopper's IP address. Should be a valid IPv4 or IPv6 address.
         :param company: Shopper's company name. Maximum 100 characters.
         :param shippingContactInfo: ShippingContactInfo object
-        '''
+        """
 
         # Call base class init
         super(TransactionFraudInfo, self).__init__()
@@ -540,10 +543,10 @@ class TransactionFraudInfo(DictableObject):
 
 
 class VaultedShopperInfo(DictableObject):
-    '''
+    """
     A Vaulted Shopper Info object, containing some of the fields defined here:
     https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
-    '''
+    """
 
     def __init__(
             self,
@@ -560,13 +563,13 @@ class VaultedShopperInfo(DictableObject):
             city: str = None,
             state: str = None,
             country: str = None,
-            zip: str = None,
+            zip_: str = None,
             email: str = None,
             phone: str = None,
             shippingContactInfo: ShippingContactInfo = None,
             transactionFraudInfo: TransactionFraudInfo = None,
     ):
-        '''
+        """
         Details of a Vaulted Shopper.
 
         More information here:
@@ -595,13 +598,13 @@ class VaultedShopperInfo(DictableObject):
         :param city: Shopper's city. Between 2-42 characters.
         :param state: Based on https://developers.bluesnap.com/docs/state-and-province-codes
         :param country: Based on https://developers.bluesnap.com/docs/country-codes
-        :param zip: Shopper's ZIP code. Maximum 20 characters.
+        :param zip_: Shopper's ZIP code. Maximum 20 characters.
         :param email: Shopper's email address. Between 3-100 characters.
         :param phone: Shopper's phone number. Between 2-36 characters.
         :param shippingContactInfo: ShippingContactInfo object
         :param transactionFraudInfo: TransactionFraudInfo
         # TODO: walletId
-        '''
+        """
 
         # Call base class init
         super(VaultedShopperInfo, self).__init__()
@@ -622,7 +625,7 @@ class VaultedShopperInfo(DictableObject):
         self.city = city
         self.state = state
         self.country = country
-        self.zip = zip
+        self.zip = zip_
         self.email = email
         self.phone = phone
         self.shippingContactInfo = shippingContactInfo
@@ -665,14 +668,14 @@ class VaultedShopperInfo(DictableObject):
 
 
 class Level3DataItem(DictableObject):
-    '''
+    """
     Contains Level 2/3 data properties for each item purchased
     https://developers.bluesnap.com/v8976-JSON/docs/level3dataitems
 
     While all level3DataItems properties are optional in the request, each data level (such as Level 2 and Level 3)
     has specific requirements. See the Level 2/3 Data guide for complete details.
     https://developers.bluesnap.com/docs/level-23-data
-    '''
+    """
 
     def __init__(
             self,
@@ -690,7 +693,7 @@ class Level3DataItem(DictableObject):
             unitCost: str = None,
             unitOfMeasure: str = None,
     ):
-        '''
+        """
 
         :param lineItemTotal: Total item amount.
         :param commodityCode: Commodity code used to classify item.
@@ -705,7 +708,7 @@ class Level3DataItem(DictableObject):
         :param taxType: Type of tax being applied
         :param unitCost: Unit cost
         :param unitOfMeasure: Unit of measure
-        '''
+        """
 
         # Call base class init
         super(Level3DataItem, self).__init__()
@@ -749,14 +752,15 @@ class Level3DataItem(DictableObject):
 
         return result
 
+
 class Level3Data(DictableObject):
-    '''
+    """
     Contains Level 2/3 data properties for the transaction
 
     While all level3Data properties are optional in the request, each data level (such as Level 2 and Level 3) has
     specific requirements. See the Level 2/3 Data guide for complete details.
     https://developers.bluesnap.com/docs/level-23-data
-    '''
+    """
 
     def __init__(
             self,
@@ -770,7 +774,7 @@ class Level3Data(DictableObject):
             discountAmount: str = None,
             taxAmount: str = None,
             taxRate: str = None,
-            level3DataItems: list = [],
+            level3DataItems: list = (),
     ):
 
         # Call base class init
@@ -819,21 +823,22 @@ class Level3Data(DictableObject):
 
         return result
 
+
 class NetworkTransactionInfo(DictableObject):
-    '''
+    """
     Contains the network transaction information for this transaction
     https://developers.bluesnap.com/v8976-JSON/docs/network-transaction-info
-    '''
+    """
 
     def __init__(
             self,
             originalNetworkTransactionId: str = None,
     ):
-        '''
+        """
 
         :param originalNetworkTransactionId: If this transaction is linked to an a previous network transaction ID,
             that NTI is sent here.
-        '''
+        """
 
         # Call base class init
         super(NetworkTransactionInfo, self).__init__()
@@ -853,20 +858,21 @@ class NetworkTransactionInfo(DictableObject):
 
         return result
 
+
 class ThreeDSecure(DictableObject):
-    '''
+    """
     Contains 3D Secure details for this transaction
     https://developers.bluesnap.com/v8976-JSON/docs/threedsecure
-    '''
+    """
 
     def __init__(
             self,
             threeDSecureReferenceId: str = None,
     ):
-        '''
+        """
 
         :param threeDSecureReferenceId: 3-D Secure reference ID received from client
-        '''
+        """
 
         # Call base class init
         super(ThreeDSecure, self).__init__()
@@ -886,13 +892,14 @@ class ThreeDSecure(DictableObject):
 
         return result
 
+
 class CreditCard(DictableObject):
-    '''
+    """
     Contains the details for a specific credit card, such as the card number and expiration date
 
     Required if sending card data or if vaulted shopper has multiple cards.
     https://developers.bluesnap.com/v8976-JSON/docs/credit-card
-    '''
+    """
 
     def __init__(
             self,
@@ -901,10 +908,10 @@ class CreditCard(DictableObject):
             expirationMonth: str = None,
             expirationYear: str = None,
     ):
-        '''
+        """
 
         :param cardLastFourDigits: use if sending a vaulted shopper ID and the shopper has multiple saved credit cards.
-        '''
+        """
 
         # Call base class init
         super(CreditCard, self).__init__()
@@ -930,13 +937,14 @@ class CreditCard(DictableObject):
 
         return result
 
+
 class CreditCardInfo(DictableObject):
-    '''
+    """
     Contains credit card information for vaulted shoppers
 
     More info:
     https://developers.bluesnap.com/v8976-JSON/docs/payment-sources
-    '''
+    """
 
     def __init__(
             self,
@@ -945,7 +953,7 @@ class CreditCardInfo(DictableObject):
             pfToken: str = None,
             status: str = None,
     ):
-        '''
+        """
         Used as part of the paymentSources array in calls related to Vaulted Shoppers.
 
         Note: If status is included in the request, specify the card to be deleted by including cardType and
@@ -956,7 +964,7 @@ class CreditCardInfo(DictableObject):
         :param pfToken: Required if using Hosted Payment Fields. Do not include creditCard parameter if
             using this token. Relevant only for Create Vaulted Shopper and Update Vaulted Shopper.
         :param status: Enter "D" to delete the card from the shopper
-        '''
+        """
 
         # Call base class init
         super(CreditCardInfo, self).__init__()
@@ -1001,7 +1009,7 @@ class VaultedShopperResource(Resource):
         super(VaultedShopperResource, self).__init__()
 
     def retrieve(self, vaultedShopperId: str) -> dict:
-        '''
+        """
         The Retrieve Vaulted Shopper request retrieves all the saved details for the shopper associated with the
         vaultedShopperId you send in the request.
 
@@ -1009,14 +1017,14 @@ class VaultedShopperResource(Resource):
 
         :param vaultedShopperId:
         :return:
-        '''
+        """
 
         response, body = self.request('GET', '%s/%s' % (self.path, vaultedShopperId))
 
         return dict(body['vaulted-shopper'])
 
     def retrieveByMerchantShopperId(self, merchantShopperId: str) -> dict:
-        '''
+        """
         The Retrieve Vaulted Shopper request retrieves all the saved details for the shopper associated with the
         merchantShopperId you send in the request.
 
@@ -1024,7 +1032,7 @@ class VaultedShopperResource(Resource):
 
         :param merchantShopperId:
         :return:
-        '''
+        """
 
         response, body = self.request('GET', '%s/merchant/%s' % (self.path, merchantShopperId))
 
@@ -1037,7 +1045,7 @@ class VaultedShopperResource(Resource):
             # TODO: ecpInfo
             # TODO: sepaDirectDebitInfo
     ) -> dict:
-        '''
+        """
         The Create Vaulted Shopper request enables you to store a shopper's details (including payment info) securely
         in BlueSnap. BlueSnap will provide a token (vaultedShopperId) for that saved shopper.
 
@@ -1052,7 +1060,7 @@ class VaultedShopperResource(Resource):
         :param paymentSource: Contains payment source information for vaulted shoppers. More info:
             https://developers.bluesnap.com/v8976-JSON/docs/payment-sources
         :return:
-        '''
+        """
 
         data = {
             "paymentSources": {
@@ -1076,7 +1084,7 @@ class VaultedShopperResource(Resource):
             # TODO: ecpInfo
             # TODO: sepaDirectDebitInfo
     ) -> dict:
-        '''
+        """
         The Update Vaulted Shopper request enables you to update an existing vaulted shopper by changing their
         contact info, adding credit card details, or adding wallet details.
 
@@ -1087,13 +1095,10 @@ class VaultedShopperResource(Resource):
         :param vaultedShopperId:
         :param vaultedShopperInfo: Contains information about the vaulted shopper,
             More info here: https://developers.bluesnap.com/v8976-JSON/docs/vaulted-shopper
-        :param paymentFieldsTokenId: Required if using Hosted Payment Fields. Do not include credit-card resource if
-            using this token
-        :param billingContactInfo: Contains billing contact information. This is connected to the payment method and
-            will NOT be used for invoicing, etc.
+        :param paymentSource: TODO
         :return: The vaultedShopper object, which contains all details that are saved for that shopper.
 
-        '''
+        """
 
         data = {
             "paymentSources": {
@@ -1108,8 +1113,9 @@ class VaultedShopperResource(Resource):
 
         return body
 
+
 class TransactionMetadata:
-    '''
+    """
     The Payment API enables you to associate any data you wish to any type of transaction by using the flexible
     metadata property in your requests. This elegant approach to handling key business data allows you to create
     fields that append key information to a payment, such as product info, customer info, key dates, shipping and tax,
@@ -1136,7 +1142,7 @@ class TransactionMetadata:
             "metaDescription": "Shipping Amount"
         }
     ]
-    '''
+    """
 
     def __init__(self, value: str, key: str, description: str):
 
@@ -1185,7 +1191,7 @@ class TransactionResource(Resource):
             transactionOrderSource: str = None,
             transactionMetadataObjectList: list = ()
     ) -> dict:
-        '''
+        """
         Auth Capture performs two actions via a single request:
 
             authorize: checks whether a credit card is valid and has the funds to complete a specific
@@ -1212,7 +1218,7 @@ class TransactionResource(Resource):
         :param transactionOrderSource: Identifies the order type. The only option is MOTO (Mail Order Telephone Order).
         :param transactionMetadataObjectList:
         :return:
-        '''
+        """
 
         return self._executeTransaction(
             cardTransactionType="AUTH_CAPTURE",
@@ -1235,13 +1241,13 @@ class TransactionResource(Resource):
 
     def retrieve(self, transactionId: str) -> dict:
 
-        '''
+        """
         Retrieve is a request that gets details about a past transaction, such as the transaction type, amount,
         cardholder or vaulted shopper, credit card, processing info, and so on.
 
         :param transactionId: transaction ID received in the response from BlueSnap
         :return:
-        '''
+        """
 
         response, body = self.request('GET', '%s/%s' % (self.path, transactionId))
 
@@ -1257,11 +1263,15 @@ class TransactionResource(Resource):
             pfToken: str = None,
             cardHolderInfo: CardHolderInfo = None,
             transactionFraudInfo: TransactionFraudInfo = None,
-            networkTransactionInfo: NetworkTransactionInfo = None,
             threeDSecure: ThreeDSecure = None,
-            transactionOrderSource: str = None,
+            merchantTransactionId: str = None,
+            softDescriptor: str = None,
+            descriptorPhoneNumber: str = None,
+            level3Data: Level3Data = None,
+            transactionMetadataObjectList: list = ()
+
     ) -> dict:
-        '''
+        """
         Auth Only is a request to check whether a credit card is valid and has the funds to complete a specific
         transaction (i.e. purchase). It does not actually run the charge on the card, but does temporarily hold
         the funds aside. Note that each credit card company will only hold the authorization for a limited period
@@ -1282,11 +1292,17 @@ class TransactionResource(Resource):
         :param pfToken: Hosted Payment Fields token.
         :param cardHolderInfo: Required if supplying a pfToken.
         :param transactionFraudInfo:
-        :param networkTransactionInfo: Contains the network transaction information for this transaction
         :param threeDSecure: Contains 3D Secure details for this transaction
-        :param transactionOrderSource: Identifies the order type. The only option is MOTO (Mail Order Telephone Order).
+        :param merchantTransactionId: Merchant's unique ID for a new transaction. Between 1-50 characters.
+        :param softDescriptor: Description of the transaction, which appears on the shopper's credit card statement.
+            Maximum 20 characters. Overrides merchant default value.
+        :param descriptorPhoneNumber: Merchant's support phone number that will appear on the shopper's credit card
+            statement. Maximum 20 characters. Overrides merchant default value.
+        :param level3Data: Contains Level 2/3 data properties for the transaction
+        :param transactionMetadataObjectList:
+
         :return:
-        '''
+        """
 
         return self._executeTransaction(
             cardTransactionType="AUTH_ONLY",
@@ -1299,8 +1315,11 @@ class TransactionResource(Resource):
             cardHolderInfo=cardHolderInfo,
             transactionFraudInfo=transactionFraudInfo,
             threeDSecure=threeDSecure,
-            transactionOrderSource=transactionOrderSource,
-            networkTransactionInfo=networkTransactionInfo,
+            merchantTransactionId=merchantTransactionId,
+            softDescriptor=softDescriptor,
+            descriptorPhoneNumber=descriptorPhoneNumber,
+            level3Data=level3Data,
+            transactionMetadataObjectList=transactionMetadataObjectList,
         )
 
     def _executeTransaction(
@@ -1323,7 +1342,7 @@ class TransactionResource(Resource):
             transactionOrderSource: str = None,
             transactionMetadataObjectList: list = (),
     ) -> dict:
-        '''
+        """
         Internal, perform an auth/capture operation.
 
         :param cardTransactionType:
@@ -1347,7 +1366,7 @@ class TransactionResource(Resource):
         :param transactionMetadataObjectList:
 
         :return:
-        '''
+        """
 
         data = {
             "amount": amount,
@@ -1359,7 +1378,7 @@ class TransactionResource(Resource):
         if not pfToken and not vaultedShopperId:
             raise RuntimeError("Must supply either vaultedShopperId or pfToken.")
 
-        if not transactionInitiator in { "SHOPPER", "MERCHANT" }:
+        if not transactionInitiator in {"SHOPPER", "MERCHANT"}:
             raise RuntimeError("transactionInitiator must be SHOPPER or MERCHANT.")
 
         if transactionOrderSource:
