@@ -1381,6 +1381,7 @@ class TransactionResource(Resource):
         return self._executeTransaction(
             cardTransactionType="AUTH_REVERSAL",
             transactionId=transactionId,
+            mode="PUT",
         )
 
     def _executeTransaction(
@@ -1403,6 +1404,7 @@ class TransactionResource(Resource):
             threeDSecure: Optional[ThreeDSecure] = None,
             transactionOrderSource: Optional[str] = None,
             transactionMetadataObjectList: list = (),
+            mode: str = "POST",
     ) -> dict:
         """
         Internal, perform an auth/capture operation.
@@ -1434,9 +1436,6 @@ class TransactionResource(Resource):
         data = {
             "cardTransactionType":  cardTransactionType,
         }
-
-        if not pfToken and not vaultedShopperId:
-            raise RuntimeError("Must supply either vaultedShopperId or pfToken.")
 
         if transactionId:
             data["transactionId"] = transactionId
@@ -1501,6 +1500,6 @@ class TransactionResource(Resource):
                 'metaData': transactionMetaData
             }
 
-        response, body = self.request('POST', self.path, data=data)
+        response, body = self.request(mode, self.path, data=data)
 
         return body
